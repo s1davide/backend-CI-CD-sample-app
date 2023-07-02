@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import  { SecretsManager } from "@aws-sdk/client-secrets-manager"
+import  { execSync } from "child_process"
 
 @Injectable()
 export class AwsService {
@@ -8,15 +9,19 @@ export class AwsService {
         this.secretsManager= new SecretsManager({region:"us-east-1"})
     }
     getDatabaseSecrets(){
-        return new Promise((resolve,reject)=>this.secretsManager.getSecretValue({SecretId:process.env.DATABASE_SECRETID},(err,data)=>{
+        return new Promise((resolve,reject)=>this.secretsManager.getSecretValue({SecretId:process.env.DATABASE_SECRETID},
+            async(err,data)=>{
             if(err) {reject(err); return;}
-            const rdsCredentials:RDSCredentials=JSON.parse(data.SecretString);
+            const rdsCredentials:RDSCredentials=JSON.parse(data.SecretString);         
             const env=process.env;
-            env.DATABASE_ENDPOINT=rdsCredentials.host;
-            env.DATABASE_NAME=rdsCredentials.dbInstanceIdentifier;
-            env.PORT=rdsCredentials.port.toString();
-            env.POSTGRES_USER=rdsCredentials.username;
-            env.POSTGRES_PASSWORD=rdsCredentials.password;
+            const DATABASE_ENDPOINT=rdsCredentials.host;
+            const DATABASE_NAME=rdsCredentials.dbInstanceIdentifier;
+            const PORT=rdsCredentials.port.toString();
+            const POSTGRES_USER=rdsCredentials.username;
+            const POSTGRES_PASSWORD=rdsCredentials.password;
+           
+            // wait for the process to spawn            
+            env.DATABASE_URL=`postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DATABASE_ENDPOINT}:${PORT}/${DATABASE_NAME}?schema=public`
             resolve(true)
         }))
     }

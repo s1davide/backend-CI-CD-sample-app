@@ -12,9 +12,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
   async onModuleInit() {
     if(process.env.DEVELOPMENT_DB!=="true"){
-      await this.aws.getDatabaseSecrets()
+      await this.aws.getDatabaseSecrets()     
     }
     await this.$connect();
+    
   }
 
   async enableShutdownHooks(app: INestApplication) {

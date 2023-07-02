@@ -6,7 +6,7 @@ import { HttpStatus } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const {httpAdapter}=app.get(HttpAdapterHost);
-  app.enableCors({origin:process.env.FRONTEND_URL_ALLOWED_CORS})
+  app.enableCors({origin:[process.env.FRONTEND_URL_ALLOWED_CORS,"http://ec2-3-222-234-168.compute-1.amazonaws.com/"]})
   app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter,{
     P2002: HttpStatus.UNPROCESSABLE_ENTITY
   }))

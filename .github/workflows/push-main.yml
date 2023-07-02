@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: 16
       - name: Run unitary Tests
-        run: npm ci && npm run test:ci
+        run: npm i && npm run test
             
       - name: Deploy to server
         uses: appleboy/ssh-action@master
@@ -25,46 +25,60 @@ jobs:
           host: ${{ secrets.HOST}}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          script: |  
-              cp $HOME/.profile.save $HOME/.profile           
+          script: |          
+              echo Initializing deploy              
+                REPOSITORY_URL_BACKEND=$(echo "${{github.repositoryUrl}}" | sed s#git://#https://${{secrets.GH_TOKEN}}@#)  
+                FILE_START_APP_BACKEND=$HOME/start_backend.sh
+                FILE_SET_ENV_VAR_BACKEND=$HOME/backend_env.sh              
+              rm -f $FILE_START_APP_BACKEND
+              rm -f $FILE_SET_ENV_VAR_BACKEND
               source $HOME/.profile
-                REPOSITORY_URL=$(echo "${{github.repositoryUrl}}" | sed s#git://#https://${{secrets.GH_TOKEN}}@#)  
-                FILE_START_APP=$HOME/start_backend.sh
-                FILE_SET_ENV_VAR=$HOME/backend_env.sh
-              rm $FILE_START_APP
-              rm $FILE_SET_ENV_VAR
+              echo 'export BACKEND_PORT=${{secrets.BACKEND_PORT}}
+              export DATABASE_SECRETID=${{secrets.DATABASE_SECRETID}}'>> $FILE_SET_ENV_VAR_BACKEND
 
-              echo 'export BACKEND_PORT=${{secrets.BACKEND_PORT}}'>> $FILE_SET_ENV_VAR
+              echo Creating pm2 ecosystem file
+              rm $HOME/${{secrets.APP_NAME}}.config.js
+              echo '
+                module.exports = {
+                  apps: [
+                    {
+                      name: "${{secrets.APP_NAME}}",
+                      cwd: "./${{secrets.APP_NAME}}",
+                      script: "npm",
+                      args: "run start:prod",
+                      max_memory_restart: "1G",
+                    }
+                  ],
+                };
+              ' >> $HOME/${{secrets.APP_NAME}}.config.js
 
               echo Creating script to initialize app
               echo 'pm2 describe ${{secrets.APP_NAME}} > /dev/null
               not_exists=$?
-              if [ "${not_exists}" -ne 0 ]; then      
-                cd "$HOME/${{ secrets.FOLDER_PROJECT }}"          
-                pm2 start npm --name ${{secrets.APP_NAME}} -- run start:prod -- -p 3000
+              if [ "${not_exists}" -ne 0 ]; then                     
+                pm2 start $HOME/${{secrets.APP_NAME}}.config.js                
                 pm2 save              
               else
                 pm2 restart ${{secrets.APP_NAME}}              
-              fi' >> $FILE_START_APP        
+              fi' >> $FILE_START_APP_BACKEND        
               
-              chmod +x $FILE_START_APP
-              chmod +x $FILE_SET_ENV_VAR
-              if grep -Fxq "source $FILE_START_APP" $HOME/.profile; then
-                echo "source $FILE_START_APP" >> $HOME/.profile  
-              fi              
-              if grep -Fxq "source $FILE_SET_ENV_VAR" $HOME/.profile; then
-                echo "source $FILE_SET_ENV_VAR" >> $HOME/.profile
+              chmod +x $FILE_START_APP_BACKEND
+              chmod +x $FILE_SET_ENV_VAR_BACKEND
+              if [ $(cat $HOME/.profile | grep -c "source $FILE_SET_ENV_VAR_BACKEND") -eq 0 ]; then
+                echo "source $FILE_SET_ENV_VAR_BACKEND" >> $HOME/.profile
+              fi
+              if [ $(cat $HOME/.profile | grep -c "source $FILE_START_APP_BACKEND") -eq 0 ]; then
+                echo "source $FILE_START_APP_BACKEND" >> $HOME/.profile  
               fi
               if [[ ! -e ${{ secrets.FOLDER_PROJECT }} ]]; then
-                git clone $REPOSITORY_URL ${{ secrets.FOLDER_PROJECT }}
-                cd ${{ secrets.FOLDER_PROJECT }}                                 
-              else
-                cd ${{ secrets.FOLDER_PROJECT }}           
-                git pull $REPOSITORY_URL
+                git clone $REPOSITORY_URL_BACKEND $HOME/${{ secrets.FOLDER_PROJECT }}
+              else                   
+                git -C $HOME/${{ secrets.FOLDER_PROJECT }} pull $REPOSITORY_URL_BACKEND
               fi
-              REPOSITORY_URL=""
-              npm ci              
-              source $FILE_SET_ENV_VAR
-              npm run migrate:prod              
-              source $FILE_START_APP
+              REPOSITORY_URL_BACKEND=""
+              npm --prefix $HOME/${{ secrets.FOLDER_PROJECT }} ci              
+              source $FILE_SET_ENV_VAR_BACKEND
+              npm --prefix $HOME/${{ secrets.FOLDER_PROJECT }} run build
+              npm --prefix $HOME/${{ secrets.FOLDER_PROJECT }} run migrate:prod              
+              source $FILE_START_APP_BACKEND
               

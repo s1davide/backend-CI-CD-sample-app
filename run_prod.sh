@@ -1,0 +1,1 @@
+ export DATABASE_URL=`node ./custom_script/get_credential.js`
