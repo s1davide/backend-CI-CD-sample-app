@@ -61,15 +61,16 @@ $ yarn run test:cov
 ## CI/CD and Deployment
 
 This repository is set up with CI/CD using GitHub Actions. On pushing to the master branch, an automated pipeline is triggered to run tests and deploy the application. To ensure successful deployment, the following secrets are required: 
-`APP_NAME`: Name of the application  (Used for pm2). 
-`BACKEND_PORT`: The port number on which the Nest.js backend application will run inside the server, used by Nginx as a reverse proxy.
-`DATABASE_SECRETID`: The name of the RDS database secret stored in AWS Console.
-`FOLDER_PROJECT`: Name of the folder that will be cloned on the server (e.g., backend). 
-`GH_TOKEN`: GitHub token with repository read permissions (manually generated).
-`HOST`: Domain or IP address of the server, without protocol or trailing slash (e.g., EC2 instance).
-`SSH_KEY`: SSH key pair generated for the EC2 instance to enable SSH connection and deployment.
+
+`APP_NAME`: Name of the application  (Used for pm2).\
+`BACKEND_PORT`: The port number on which the Nest.js backend application will run inside the server, used by Nginx as a reverse proxy.\
+`DATABASE_SECRETID`: The name of the RDS database secret stored in AWS Console.\
+`FOLDER_PROJECT`: Name of the folder that will be cloned on the server (e.g., backend).\
+`GH_TOKEN`: GitHub token with repository read permissions (manually generated).\
+`HOST`: Domain or IP address of the server, without protocol or trailing slash (e.g., EC2 instance).\
+`SSH_KEY`: SSH key pair generated for the EC2 instance to enable SSH connection and deployment.\
 `USERNAME`: Username for logging in to the instance. 
-After setting up these secrets, you can push changes to the repository. 
+After setting up these secrets, you can push changes to the repository. \
 Note that the application is deployed on the EC2 instance created using the CloudFormation template.
 
 https://github.com/s1davide/cloudformation-technical-test
